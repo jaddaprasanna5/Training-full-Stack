@@ -1,3 +1,4 @@
+import { OrderNotFoundError, InvalidOrderOperationError, UnavailableFoodError } from "../utils/errors";
 import { Order, OrderItem } from "../models/Order";
 import { MenuService } from "./MenuService";
 
@@ -21,7 +22,7 @@ export class OrderService {
         const orderItems: OrderItem[] = inputs.map(inp => {
             const food = this.menuService.getFoodById(inp.foodId);
             if (!food) throw new Error(`Food ID ${inp.foodId} not found`); // id not found
-            if (!food.isAvailable) throw new Error(`${food.name} is unavailable`); // like Pizza is unavailable
+            if (!food.isAvailable) throw new UnavailableFoodError(food.name);// like Pizza is unavailable
             return { foodItem: food, quantity: inp.quantity };
         });
 
@@ -53,7 +54,7 @@ export class OrderService {
     // Update order status with flow check - cannot jump directly
     UpdateOrderStatus(id: number, status: Order["orderStatus"]): Order {
         const order = this.getOrderById(id);
-        if (!order) throw new Error("Order Not found");
+        if (!order) throw new OrderNotFoundError(id);
 
         // Allowed status flow - placed can go to preparing or cancelled etc
         const flow: Record<string, string[]> = {
@@ -64,7 +65,7 @@ export class OrderService {
             cancelled: [] // final state
         };
         if (!flow[order.orderStatus]!.includes(status)) {
-            throw new Error(`Cannot change from ${order.orderStatus} to ${status}`);
+           throw new InvalidOrderOperationError(`Cannot change from ${order.orderStatus} to ${status}`);
         }
 
         order.orderStatus = status;
