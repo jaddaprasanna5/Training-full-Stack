@@ -1,27 +1,27 @@
-import { FoodItem } from "./FoodItem"; // importing FoodItem structure
+import { FoodItem } from "./FoodItem";
 
-// Order can be only in these 5 status
+// order status allowed
 export type OrderStatus = "placed" | "preparing" | "out_for_delivery" | "delivered" | "cancelled";
 
-// Payment can be only these 3 status
+// payment status
 export type PaymentStatus = "pending" | "paid" | "failed";
 
-//  which food and how many
+// food + qty
 export interface OrderItem {
-    foodItem: FoodItem;
-    quantity: number;
+  foodItem: FoodItem
+  quantity: number
 }
 
-// Full order structure - everything should be in this format only
+// full order - main structure
 export interface Order {
-    id: number;
-    customerName: string;
-    items: OrderItem[];
-    subTotal: number;
-    tax: number;
-    deliveryCharge: number;
-    totalAmount: number;
-    orderStatus: OrderStatus;
-    paymentStatus: PaymentStatus;
-    createdAt: Date;
+  id: number
+  customerName: string
+  items: OrderItem[]
+  subTotal: number
+  tax: number
+  deliveryCharge: number
+  totalAmount: number
+  orderStatus: OrderStatus
+  paymentStatus: PaymentStatus
+  createdAt: Date
 }

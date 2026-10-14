@@ -3,82 +3,104 @@ import { Order, OrderItem } from "../models/Order";
 import { MenuService } from "./MenuService";
 
 export class OrderService {
-    private orders: Order[] = []; // private list to store all orders
-    private nextId = 1; 
+  private orders: Order[] = []
+  private nextId = 1
 
-    constructor(private menuService: MenuService) {} // injecting MenuService to check food exists
+  constructor(private menuService: MenuService) {}
 
-    // Private  to calculate bill - subtotal, tax 5%, delivery 40 if <500
-    private calc(items: OrderItem[]) {
-        const subTotal = items.reduce((sum, i) => sum + i.foodItem.price * i.quantity, 0);
-        const tax = Math.round(subTotal * 0.05); // 5% tax
-        const deliveryCharge = subTotal < 500 ? 40 : 0; // free delivery above 500
-        return { subTotal, tax, deliveryCharge, totalAmount: subTotal + tax + deliveryCharge };
+  // calc bill - subtotal, tax, delivery
+  private calc(items: OrderItem[]) {
+    let subTotal = 0
+    for(let i of items){
+      subTotal = subTotal + (i.foodItem.price * i.quantity)
+    }
+    let tax = Math.round(subTotal * 0.05) // 5% tax
+    let deliveryCharge = 0
+    if(subTotal < 500){
+      deliveryCharge = 40
+    }
+    let totalAmount = subTotal + tax + deliveryCharge
+    return { subTotal, tax, deliveryCharge, totalAmount }
+  }
+
+  createOrder(customerName: string, inputs: { foodId: number; quantity: number }[]): Order {
+    let orderItems: OrderItem[] = []
+
+    for(let inp of inputs){
+      let food = this.menuService.getFoodById(inp.foodId)
+      if(!food){
+        throw new Error("Food ID " + inp.foodId + " not found")
+      }
+      if(food.isAvailable == false){
+        throw new UnavailableFoodError(food.name) // like pizza
+      }
+      orderItems.push({ foodItem: food, quantity: inp.quantity })
     }
 
-    // Create new order - customer name and array of foodId + quantity
-    createOrder(customerName: string, inputs: { foodId: number; quantity: number }[]): Order {
-        // Convert foodId to actual FoodItem object
-        const orderItems: OrderItem[] = inputs.map(inp => {
-            const food = this.menuService.getFoodById(inp.foodId);
-            if (!food) throw new Error(`Food ID ${inp.foodId} not found`); // id not found
-            if (!food.isAvailable) throw new UnavailableFoodError(food.name);// like Pizza is unavailable
-            return { foodItem: food, quantity: inp.quantity };
-        });
+    let bill = this.calc(orderItems)
 
-        const { subTotal, tax, deliveryCharge, totalAmount } = this.calc(orderItems);
-
-        const order: Order = {
-            id: this.nextId++,
-            customerName,
-            items: orderItems,
-            subTotal, tax, deliveryCharge, totalAmount,
-            orderStatus: "placed", // first status is always placed
-            paymentStatus: "pending",
-            createdAt: new Date(),
-        };
-
-        this.orders.push(order);
-        return order;
+    let order: Order = {
+      id: this.nextId++,
+      customerName: customerName,
+      items: orderItems,
+      subTotal: bill.subTotal,
+      tax: bill.tax,
+      deliveryCharge: bill.deliveryCharge,
+      totalAmount: bill.totalAmount,
+      orderStatus: "placed", // starting status
+      paymentStatus: "pending",
+      createdAt: new Date()
     }
 
-    getAll(): Order[] {
-        return [...this.orders]; // return copy so original is safe
+    this.orders.push(order)
+    return order
+  }
+
+  getAll(): Order[] {
+    return [...this.orders]
+  }
+
+  getOrderById(id: number): Order | undefined {
+    for(let o of this.orders){
+      if(o.id == id) return o
+    }
+    return undefined
+  }
+
+  // status change with flow validation
+  UpdateOrderStatus(id: number, status: Order["orderStatus"]): Order {
+    let order = this.getOrderById(id)
+    if(!order){
+      throw new OrderNotFoundError(id)
     }
 
-    // Find order by id
-    getOrderById(id: number): Order | undefined {
-        return this.orders.find(o => o.id === id)
+    let flow: any = {
+      placed: ["preparing", "cancelled"],
+      preparing: ["out_for_delivery", "cancelled"],
+      out_for_delivery: ["delivered", "cancelled"],
+      delivered: [],
+      cancelled: []
     }
 
-    // Update order status with flow check - cannot jump directly
-    UpdateOrderStatus(id: number, status: Order["orderStatus"]): Order {
-        const order = this.getOrderById(id);
-        if (!order) throw new OrderNotFoundError(id);
-
-        // Allowed status flow - placed can go to preparing or cancelled etc
-        const flow: Record<string, string[]> = {
-            placed: ["preparing", "cancelled"],
-            preparing: ["out_for_delivery", "cancelled"],
-            out_for_delivery: ["delivered", "cancelled"],
-            delivered: [], // final state - no more change
-            cancelled: [] // final state
-        };
-        if (!flow[order.orderStatus]!.includes(status)) {
-           throw new InvalidOrderOperationError(`Cannot change from ${order.orderStatus} to ${status}`);
-        }
-
-        order.orderStatus = status;
-        return order;
+    if(!flow[order.orderStatus].includes(status)){
+      throw new InvalidOrderOperationError("Cannot change from " + order.orderStatus + " to " + status)
     }
 
-    // Cancel order - just calls UpdateOrderStatus with cancelled
-    cancelOrder(id: number): Order {
-        return this.UpdateOrderStatus(id, "cancelled");
-    }
+    order.orderStatus = status
+    return order
+  }
 
-    // Get all orders with same status - like all delivered orders
-    getOrderByStatus(status: Order["orderStatus"]): Order[] {
-        return this.orders.filter(o => o.orderStatus === status);
+  cancelOrder(id: number): Order {
+    return this.UpdateOrderStatus(id, "cancelled")
+  }
+
+  getOrderByStatus(status: Order["orderStatus"]): Order[] {
+    let res: Order[] = []
+    for(let o of this.orders){
+      if(o.orderStatus == status){
+        res.push(o)
+      }
     }
+    return res
+  }
 }

@@ -1,11 +1,11 @@
-// Only these 4 categories are allowed, if other comes it should throw error
+// only these 4 category allowed
 export type FoodCategory = "starter" | "main" | "dessert" | "drink";
 
-// Blueprint for a single food item
+// single food item structure
 export interface FoodItem {
-    id: number;
-    name: string;
-    category: FoodCategory;
-    price: number;
-    isAvailable: boolean; 
+  id: number
+  name: string
+  category: FoodCategory
+  price: number
+  isAvailable: boolean
 }
