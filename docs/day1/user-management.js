@@ -1,46 +1,58 @@
-let users = [];
-let nextID = 1;
+let usersList = []
+let currId = 1
 
-function createUser(name,email,isActive){
-    if(!name || !email){
-        throw new Error("Name and email required");
-    }
-    const user = {
-        id:nextID++,
-        name:name,
-        email:email,
-        isActive: isActive ?? true,
-    };
-    users.push(user);
-    return user;
+function createUser(name,email,activeStatus){
+  // check if name email present
+  if(!name ||!email){
+    throw new Error("Name and email is required")
+  }
+
+  let userObj = {
+    id : currId,
+    name : name,
+    email : email,
+    isActive : activeStatus
+  }
+
+  if(activeStatus == undefined){
+    userObj.isActive = true
+  }
+
+  currId = currId + 1
+  usersList.push(userObj)
+  return userObj
 }
 
 function getAllUsers(){
-    return users;
+  return usersList
 }
 
-function searchUser(email){
-    const found = users.find((u) => u.email === email);
-    if(!found){
-        throw new Error(`User with ${email} not found`);
+function searchUser(emailId){
+  for(let i=0;i<usersList.length;i++){
+    if(usersList[i].email == emailId){
+      return usersList[i]
     }
-    return found;
+  }
+  throw new Error("User with email " + emailId + " not found")
 }
 
 function getActiveUsers(){
-    return users.filter((u) => u.isActive === true);
+  let result = usersList.filter(u => u.isActive == true)
+  return result
 }
 
-try {
-  console.log(createUser("Prasanna", "prasu@test.com", true));
-  console.log(createUser("Jadda", "jadda@test.com", false));
-  console.log(createUser("Manian", "manian@test.com", true));
-  console.log(getAllUsers());
-  console.log(searchUser("prasu@test.com"));
+// main code
+try{
+  console.log(createUser("Prasanna","prasu@test.com",true))
+  console.log(createUser("Jadda","jadda@test.com",false))
+  let third = createUser("Manian","manian@test.com") // default active
+  console.log(third)
 
-  console.log(getActiveUsers()); 
-  console.log(searchUser("wrong@test.com"));
+  console.log("all - ", getAllUsers())
+  console.log("search ", searchUser("prasu@test.com"))
+  console.log("active ", getActiveUsers())
 
-} catch (e) {
-  console.error("Error caught:", e.message);
+  searchUser("wrong@test.com") // error will come here
+}catch(error){
+  console.log("got error -", error.message)
 }
