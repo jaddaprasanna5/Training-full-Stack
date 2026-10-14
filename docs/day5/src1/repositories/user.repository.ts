@@ -1,29 +1,36 @@
 import { User } from "../models/user.model";
 import { InMemoryRepository } from "./base.repository";
 
-// User repo - extends base generic repo, so we get create, findAll, findById, update, delete for free
-export class UserRepository extends InMemoryRepository<User>{
+// user repo extends base
+export class UserRepository extends InMemoryRepository<User> {
 
-    // FIND BY EMAIL - needed to check duplicate email before create/update
-    findByEmail(email:string):User|undefined{
-        // Test@gmail.com = test@gmail.com
-        return this.items.find(u => u.email.toLowerCase() === email.toLowerCase());
+  findByEmail(email: string): User | undefined {
+    let lower = email.toLowerCase()
+    for(let u of this.items){
+      if(u.email.toLowerCase() == lower){
+        return u // found
+      }
     }
+    return undefined
+  }
 
-    // SEARCH - search by name or email, like PDF Gate 1 search feature
-    search(query:string):User[]{
-        const q = query.toLowerCase(); // make query lowercase for easy matching
-        // if name contains q OR email contains q, return it
-        return this.items.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  search(query: string): User[] {
+    let q = query.toLowerCase() // for search
+    let res: User[] = []
+    for(let u of this.items){
+      let nameMatch = u.name.toLowerCase().includes(q)
+      let emailMatch = u.email.toLowerCase().includes(q)
+      if(nameMatch || emailMatch){
+        res.push(u)
+      }
     }
+    return res
+  }
 
-    // DEACTIVATE - soft delete, not hard delete, just set active = false
-    deactivate(id: number): User | undefined {
-    const user = this.findById(id); // first find user
-    if (user) {
-      user.active = false; // set false in memory
-      return this.update(id, { active: false } as any); 
-    }
-    return undefined; // if user not found
+  deactivate(id: number): User | undefined {
+    let user = this.findById(id) // check first
+    if(!user) return undefined
+    user.active = false
+    return this.update(id, { active: false } as any) // update
   }
 }

@@ -1,12 +1,15 @@
-export type Role = "admin" | "user";
+export type Role = "admin" | "user" // only 2 roles
 
 export interface User {
-  id: number;        
-  name: string;     
-  email: string;     
-  role: Role;        
-  active: boolean;  
+  id: number
+  name: string
+  email: string
+  role: Role
+  active: boolean // true = active, false = deactivated
 }
 
-export type CreateUserInput = Omit<User, "id" | "active">;
-export type UpdateUserInput = Partial<CreateUserInput>;
+// for create - id and active not needed
+export type CreateUserInput = Omit<User, "id" | "active">
+
+// for update - all optional
+export type UpdateUserInput = Partial<CreateUserInput>

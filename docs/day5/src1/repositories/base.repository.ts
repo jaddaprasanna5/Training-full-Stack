@@ -1,37 +1,55 @@
-// Generic  - can store any type that has id, like User, Task 
+// generic repo - works for User, Task etc
 export class InMemoryRepository<T extends { id: number }> {
-  protected items: T[] = []; // main array where we store all data - acts like DB table
-  private currentId = 1; // auto increment id
+  protected items: T[] = [] // main list like table
+  private currentId = 1 // auto id counter
 
-  // CREATE - add new item, give it new id
-  create(item: Omit<T, "id">): T {
-    const newItem = {...item, id: this.currentId++ } as T; 
-    this.items.push(newItem); // push to array
-    return newItem; // return created item
+  create(item: any): T {
+    let newItem = {...item, id: this.currentId++ } as T // give id
+    this.items.push(newItem)
+    return newItem
   }
 
-  // GET ALL - return copy of array so outside code can't directly change original
   findAll(): T[] {
-    return [...this.items]; 
+    return [...this.items] // return copy
   }
 
-  // GET BY ID - find one item
-  findById(id: number): T | undefined {
-    return this.items.find(i => i.id === id);
+  findById(id: number) {
+    // loop and find
+    for(let i of this.items){
+      if(i.id == id){
+        return i
+      }
+    }
+    return undefined // not found
   }
 
-  // UPDATE - find index, then merge old data with new data
-  update(id: number, data: Partial<Omit<T, "id">>): T | undefined {
-    const index = this.items.findIndex(i => i.id === id);
-    if (index === -1) return undefined; // id not found
-    this.items[index] = {...this.items[index],...data } as T; // keep old + overwrite new
-    return this.items[index];
+  update(id: number, data: any) {
+    let idx = -1
+    for(let j=0; j<this.items.length; j++){
+      let curr = this.items[j] // store item first
+      if(curr && curr.id == id){ // check curr exists then check id
+        idx = j
+        break
+      }
+    }
+    if(idx == -1) return undefined // id not there
+
+    let oldItem = this.items[idx]
+    if(!oldItem) return undefined // extra safety
+
+    this.items[idx] = {...oldItem,...data } as T // merge old + new
+    return this.items[idx]
   }
 
-  // DELETE - remove by id, hard delete
-  delete(id:number):boolean{
-    const before = this.items.length;
-    this.items = this.items.filter(i => i.id!== id); // keep all except this id
-    return this.items.length!== before; // true if something deleted, false if not found
+  delete(id: number): boolean {
+    let before = this.items.length
+    let list: T[] = []
+    for(let it of this.items){
+      if(it.id!= id){
+        list.push(it) // skip that id
+      }
+    }
+    this.items = list
+    return this.items.length!= before
   }
 }

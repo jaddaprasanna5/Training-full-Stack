@@ -1,64 +1,92 @@
-import {User,CreateUserInput,UpdateUserInput,Role} from "../models/user.model";
-import { UserNotFoundError,DuplicateEmailError } from "../errors/app.errors";
+import { User, CreateUserInput, UpdateUserInput, Role } from "../models/user.model";
+import { UserNotFoundError, DuplicateEmailError } from "../errors/app.errors";
 import { UserRepository } from "../repositories/user.repository";
-import { isValidEmail,isValidName } from "./validator";
+import { isValidEmail, isValidName } from "./validator";
 
-//  repo is just storage
-export class UserService{
-    constructor(private repo:UserRepository){}
+export class UserService {
+  constructor(private repo: UserRepository) {} // repo injection
 
-    // CREATE USER - valid and unique email
-    create(input:CreateUserInput):User{
-        // check name is atleast 2 chars, otherwise throw error
-        if(!isValidName(input.name)) throw new Error("Name Must be Atleast 2 characters");
-        // check email format like abc@gmail.com
-        if(!isValidEmail(input.email)) throw new Error("Invalid Email Format");
-        
-        // check if email already exists in db
-        const existing = this.repo.findByEmail(input.email);
-        if(existing) throw new DuplicateEmailError(input.email); // duplicate found, stop here
-        
-        // all good, save it with active=true by default
-        return this.repo.create({...input,active:true}as any);
+  // create user
+  create(input: CreateUserInput): User {
+    if(!isValidName(input.name)){
+      throw new Error("Name must be atleast 2 characters") // name check
+    }
+    if(!isValidEmail(input.email)){
+      throw new Error("Invalid email format") // email format check
     }
 
-    // GET ALL USERS - with optional filters like role, active, sort
-    getAll(filters?:{role?:Role;active?:boolean;sortByName?:boolean}):User[]{
-        let users = this.repo.findAll(); 
-        if(filters?.role)users = users.filter(u => u.role === filters.role); 
-        if (filters?.active !== undefined) users = users.filter(u => u.active === filters.active);
-        if (filters?.sortByName) users = [...users].sort((a,b) => a.name.localeCompare(b.name)); // sort A-Z
-        return users;
+    let existing = this.repo.findByEmail(input.email)
+    if(existing){
+      throw new DuplicateEmailError(input.email) // email already used
     }
 
-    // GET BY ID - if not found, throw custom error
-    getById(id:number):User{
-        const user = this.repo.findById(id);
-        if(!user)throw new UserNotFoundError(id); 
-        return user;
-    }
-
-    // SEARCH - search by name or email
-    search(query:string):User[]{
-        return this.repo.search(query);
-    }
-
-    // UPDATE USER - first check if user exists, then check duplicate email if email is changed
-    update(id:number,input:UpdateUserInput):User{
-        this.getById(id); // if not exists, it will throw error
-        if(input.email){
-            if(!isValidEmail(input.email)) throw new Error("Invalid email format");
-            const dup = this.repo.findByEmail(input.email);
-            if(dup && dup.id !== id) throw new DuplicateEmailError(input.email); // same email used by other user
-    }
-    // check name validation if name is being updated
-    if (input.name && !isValidName(input.name)) throw new Error("Invalid name");
-    return this.repo.update(id, input as any)!; // update in repo
+    return this.repo.create({...input, active: true } as any) // active default true
   }
 
-  // DEACTIVATE - not delete, just set active=false 
+  // get all with filters
+  getAll(filters?: { role?: Role; active?: boolean; sortByName?: boolean }): User[] {
+    let users = this.repo.findAll()
+
+    if(filters?.role){
+      let temp: User[] = []
+      for(let u of users){
+        if(u.role == filters.role) temp.push(u)
+      }
+      users = temp
+    }
+
+    if(filters?.active!= undefined){
+      let temp: User[] = []
+      for(let u of users){
+        if(u.active == filters.active) temp.push(u)
+      }
+      users = temp
+    }
+
+    if(filters?.sortByName){
+      users = [...users].sort((a,b) => a.name.localeCompare(b.name)) // A-Z sort
+    }
+
+    return users
+  }
+
+  // get by id
+  getById(id: number): User {
+    let user = this.repo.findById(id)
+    if(!user){
+      throw new UserNotFoundError(id) // not found error
+    }
+    return user
+  }
+
+  search(query: string): User[] {
+    return this.repo.search(query) // search
+  }
+
+  // update user
+  update(id: number, input: UpdateUserInput): User {
+    this.getById(id) // check exists
+
+    if(input.email){
+      if(!isValidEmail(input.email)){
+        throw new Error("Invalid email format")
+      }
+      let dup = this.repo.findByEmail(input.email)
+      if(dup && dup.id!= id){
+        throw new DuplicateEmailError(input.email) // other user has same email
+      }
+    }
+
+    if(input.name &&!isValidName(input.name)){
+      throw new Error("Invalid name") // name invalid
+    }
+
+    return this.repo.update(id, input as any)!
+  }
+
+  // deactivate - soft delete
   deactivate(id: number): User {
-    this.getById(id); // check exists first
-    return this.repo.deactivate(id)!; // make active false
+    this.getById(id) // check exists first
+    return this.repo.deactivate(id)! // make inactive
   }
 }
