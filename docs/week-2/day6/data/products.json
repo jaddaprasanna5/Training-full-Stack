@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "name": "Baby Lotion",
+    "price": 250
+  },
+  {
+    "id": 2,
+    "name": "Baby Shampoo",
+    "price": 180
+  },
+  {
+    "id": 3,
+    "name": "Baby Powder",
+    "price": 120
+  }
+]
